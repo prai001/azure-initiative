@@ -1,0 +1,147 @@
+{
+ "properties": {
+  "displayName": "create accurics event grid system topic and event subscription",
+  "policyType": "Custom",
+  "mode": "All",
+  "description": "This policy will create the resource Group, system topic and Event subscription if subscription does not have system topic. ",
+  "metadata": {
+   "category": "monitoring",
+   "createdBy": "f8587a6f-bc37-42a1-9d91-87bf39d3a429",
+   "createdOn": "2021-11-28T18:06:00.6197936Z",
+   "updatedBy": null,
+   "updatedOn": null
+  },
+  "parameters": {},
+  "policyRule": {
+   "if": {
+    "field": "type",
+    "equals": "Microsoft.Resources/subscriptions"
+   },
+   "then": {
+    "effect": "deployIfNotExists",
+    "details": {
+     "type": "Microsoft.EventGrid/systemTopics",
+     "deploymentScope": "subscription",
+     "roleDefinitionIds": [
+      "/providers/microsoft.authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+     ],
+     "existenceCondition": {
+      "field": "Microsoft.EventGrid/systemTopics/topicType",
+      "equals": "Microsoft.Resources.Subscriptions"
+     },
+     "deployment": {
+      "location": "East US",
+      "properties": {
+       "mode": "incremental",
+       "template": {
+        "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+        "contentVersion": "1.0.0.0",
+        "parameters": {
+         "rgName": {
+          "type": "string",
+          "defaultValue": "prai-rg"
+         },
+         "rgLocation": {
+          "type": "string",
+          "defaultValue": "East US"
+         },
+         "systemTopicsPrefix": {
+          "type": "string",
+          "defaultValue": "accurics-system-topic"
+         },
+         "eventGridSubscriptionURL": {
+          "type": "string",
+          "defaultValue": "https:/app.accurics.com/v1/api/cloudevent/azure?accesstoken=2ca0ade9-0e9d-4e5b-a7f2-94e7a93dd8c1&groupId=1b25d708-64d9-43ca-a6d4-7210952163ef"
+         },
+         "eventGridSubscriptionName": {
+          "type": "string",
+          "defaultValue": "accurics-event-subscription-webhook"
+         }
+        },
+        "variables": {
+         "eventGridTopicName": "[concat(parameters('systemTopicsPrefix'), '-', uniqueString(subscription().id, parameters('rgName')))]"
+        },
+        "resources": [
+         {
+          "type": "Microsoft.Resources/resourceGroups",
+          "apiVersion": "2021-04-01",
+          "name": "[parameters('rgName')]",
+          "location": "[parameters('rgLocation')]",
+          "properties": {}
+         },
+         {
+          "type": "Microsoft.Resources/deployments",
+          "apiVersion": "2021-04-01",
+          "name": "nestedDeployment",
+          "resourceGroup": "[parameters('rgName')]",
+          "dependsOn": [
+           "[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgName'))]"
+          ],
+          "properties": {
+           "mode": "Incremental",
+           "template": {
+            "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {},
+            "variables": {},
+            "resources": [
+             {
+              "type": "Microsoft.EventGrid/systemTopics",
+              "apiVersion": "2021-06-01-preview",
+              "name": "[variables('eventGridTopicName')]",
+              "location": "global",
+              "tags": {
+               "Owner": "Accurics",
+               "Department": "IT",
+               "Purpose": "Log-Monitor"
+              },
+              "properties": {
+               "source": "[concat('/subscriptions/', subscription().subscriptionId)]",
+               "topicType": "Microsoft.Resources.Subscriptions"
+              }
+             },
+             {
+              "type": "Microsoft.EventGrid/systemTopics/eventSubscriptions",
+              "apiVersion": "2020-04-01-preview",
+              "name": "[concat(variables('eventGridTopicName'), '/', parameters('eventGridSubscriptionName'))]",
+              "location": "global",
+              "dependsOn": [
+               "[variables('eventGridTopicName')]"
+              ],
+              "properties": {
+               "destination": {
+                "endpointType": "WebHook",
+                "properties": {
+                 "endpointUrl": "[parameters('eventGridSubscriptionURL')]"
+                }
+               },
+               "filter": {
+                "includedEventTypes": [
+                 "Microsoft.Resources.ResourceWriteSuccess",
+                 "Microsoft.Resources.ResourceDeleteSuccess"
+                ]
+               },
+               "eventDeliverySchema": "EventGridSchema",
+               "retryPolicy": {
+                "maxDeliveryAttempts": 5,
+                "eventTimeToLiveInMinutes": 1440
+               }
+              }
+             }
+            ],
+            "outputs": {}
+           }
+          }
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "id": "/providers/Microsoft.Management/managementGroups/prai-mg/providers/Microsoft.Authorization/policyDefinitions/25c219bc-b801-4a59-bc59-c27c1061ec97",
+ "type": "Microsoft.Authorization/policyDefinitions",
+ "name": "25c219bc-b801-4a59-bc59-c27c1061ec97"
+}

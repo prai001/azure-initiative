@@ -1,0 +1,36 @@
+name: manage-azure-policy-88f85887
+on:
+  workflow_dispatch:
+    inputs:
+      remarks:
+        description: 'Reason for triggering the workflow run'
+        required: false
+        default: 'Updating Azure Policies'
+
+
+## Uncomment the following if you wish to automatically trigger workflow run with every commit
+#
+#  push:
+#    paths:
+#      - 'initiatives/create_accurics_log_monitor_initiative_15e1bc69b76847afbd91a13f/**'
+#      - 'policies/create_accurics_event_grid_subscription_10e9b4a8-d01f-4e59-9b0c-25c666a2b9f8/**'
+#      - 'policies/create_accurics_event_grid_system_topic_and_event_subscription_25c219bc-b801-4a59-bc59-c27c1061ec97/**'
+#      - .github/workflows/manage-azure-policy-88f85887.yml
+jobs:
+  apply-azure-policy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{secrets.AZURE_CREDENTIALS_88f85887}}
+        allow-no-subscriptions: true
+    - name: Create or Update Azure Policies
+      uses: azure/manage-azure-policy@v0
+      with:
+        paths: |
+          initiatives/create_accurics_log_monitor_initiative_15e1bc69b76847afbd91a13f/**
+          policies/create_accurics_event_grid_subscription_10e9b4a8-d01f-4e59-9b0c-25c666a2b9f8/**
+          policies/create_accurics_event_grid_system_topic_and_event_subscription_25c219bc-b801-4a59-bc59-c27c1061ec97/**
